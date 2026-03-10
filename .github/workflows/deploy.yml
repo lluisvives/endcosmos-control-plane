@@ -13,21 +13,31 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Connect to server and deploy
+      - name: Connect to server and restart services
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            echo "EndCosmos deployment starting..."
+            set -e
 
-            cd /srv/endcosmos
+            echo "EndCosmos restart starting..."
 
-            git pull origin main
-
+            sudo systemctl restart cosmos-ai
             sudo systemctl restart endcosmos-api
-            sudo systemctl restart ai-gateway
             sudo systemctl restart nginx
 
-            echo "Deployment finished."
+            echo "Waiting for services..."
+            sleep 5
+
+            echo "Checking AI..."
+            curl -fsS http://127.0.0.1:17877/api/health
+
+            echo "Checking API..."
+            curl -fsS http://127.0.0.1:18080/health
+
+            echo "Checking public web..."
+            curl -fsS https://endcosmos.com > /dev/null
+
+            echo "EndCosmos restart finished successfully."
